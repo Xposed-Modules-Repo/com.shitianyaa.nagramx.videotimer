@@ -5,7 +5,9 @@
 /captures
 /local.properties
 /keystore.properties
-/*.jks
-/*.keystore
+*.jks
+*.keystore
+module/build
+module/mod.keystore
 build
 /Progress

@@ -68,8 +68,9 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // Keep the release equivalent to the Java package tested on devices.
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles("proguard-rules.pro")
             if (releaseSigningConfig != null) {
                 signingConfig = releaseSigningConfig
@@ -78,8 +79,21 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    sourceSets {
+        getByName("main") {
+            manifest.srcFile(rootProject.file("module/AndroidManifest.xml"))
+            java.setSrcDirs(listOf(rootProject.file("module/src")))
+            res.setSrcDirs(listOf(rootProject.file("module/res")))
+            resources.setSrcDirs(listOf(rootProject.file("module/meta")))
+            assets.setSrcDirs(emptyList<String>())
+        }
+        getByName("test") {
+            java.setSrcDirs(emptyList<String>())
+        }
     }
 
     packaging {
@@ -96,7 +110,5 @@ android {
 }
 
 dependencies {
-    compileOnly(libs.libxposed.api)
-    implementation(libs.libxposed.service)
-    testImplementation(libs.junit4)
+    compileOnly(files(rootProject.file("module/lib/api-102.jar")))
 }

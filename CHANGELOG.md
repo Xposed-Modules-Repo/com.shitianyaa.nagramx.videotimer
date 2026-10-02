@@ -4,6 +4,34 @@
 
 ## [未发布]
 
+## [1.2.0] - 2026-10-02
+
+### 更改
+
+- 应用图标改为猫耳角色抱着白底蓝色倾斜 NagramX 标志，适配自适应图标，并更新 Android 13 单色图标。
+
+### 新增
+
+- 独立视频列表，显示缩略图、标题、时长和当前播放项；顶栏点击直接回到视频详情页。
+- 跨视频保留剩余定时；暂停、缓冲和播放器转交时冻结倒计时，恢复播放后继续。
+- 定时到期只暂停，保留播放会话和顶栏，支持手动关闭；进程重启不恢复会话。
+
+### 修复
+
+- 按原版 NagramX 接口转交播放器，移除依赖 fork 专有接口的后台播放路径。
+- 确认定时后不再退出播放页；修复返回后重复顶栏、顶栏消失，以及从消息页切视频中断定时。
+- 修复视频列表切换时提前关闭播放页、播放未启动的问题。
+- 修复部分设备后台视频只有声音、没有媒体通知的问题，补齐宿主两套媒体会话的通知控制。
+- 修复暂停后全屏播放按钮缺失，以及通知换轨后回到详情页视频画面黑屏的问题。
+- 顺序播放时，通知「下一条」选择更新的视频消息，「上一条」选择更早的消息；随机播放沿用宿主逻辑。
+
+### 构建与兼容
+
+- Gradle 和 CI 构建切换到已进行真机测试的 `module/` Java 实现，保留正式签名发布流程。
+- 最低 libxposed API 明确为 102，避免声明不支持的 API 101 兼容性。
+- 新增直接执行 Java Hook 的桌面回归检查。本轮关键交互已由用户在原版 NagramX `12.9.2-4335a2e` 上确认；其他宿主和系统组合未全面验证。
+- 通知点击可能返回应用原页面，不保证定位到消息；自动播完的换轨顺序仍沿用宿主行为。
+
 ## [1.1.2] - 2026-08-09
 
 ### 更改
@@ -61,7 +89,8 @@
 - 模块状态页、运行时签名探测、日志和安全停用机制。
 - GitHub Actions 自动构建、检查和标签发布流程。
 
-[未发布]: https://github.com/Xposed-Modules-Repo/com.shitianyaa.nagramx.videotimer/compare/10102-1.1.2...HEAD
+[未发布]: https://github.com/Xposed-Modules-Repo/com.shitianyaa.nagramx.videotimer/compare/10200-1.2.0...HEAD
+[1.2.0]: https://github.com/Xposed-Modules-Repo/com.shitianyaa.nagramx.videotimer/releases/tag/10200-1.2.0
 [1.1.2]: https://github.com/Xposed-Modules-Repo/com.shitianyaa.nagramx.videotimer/releases/tag/10102-1.1.2
 [1.1.1]: https://github.com/shitianyaa/NagramXVideoTimerLSP/compare/v1.1.0...10101-1.1.1
 [1.1.0]: https://github.com/shitianyaa/NagramXVideoTimerLSP/compare/v1.0.1...v1.1.0

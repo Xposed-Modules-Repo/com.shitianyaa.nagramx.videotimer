@@ -1,12 +1,14 @@
 # NagramX Video Timer LSP
 
+<p align="center"><img src="module/res/drawable-nodpi/ic_launcher_artwork.png" width="160" alt="猫耳角色抱着 NagramX 图标"></p>
+
 [![最新版本](https://img.shields.io/github/v/release/Xposed-Modules-Repo/com.shitianyaa.nagramx.videotimer?style=for-the-badge&logo=github&logoColor=white&label=Release)](https://github.com/Xposed-Modules-Repo/com.shitianyaa.nagramx.videotimer/releases/latest)
 [![下载量](https://img.shields.io/github/downloads/Xposed-Modules-Repo/com.shitianyaa.nagramx.videotimer/total?style=for-the-badge&logo=download&logoColor=white&label=Downloads)](https://github.com/Xposed-Modules-Repo/com.shitianyaa.nagramx.videotimer/releases)
 [![许可证](https://img.shields.io/github/license/Xposed-Modules-Repo/com.shitianyaa.nagramx.videotimer?style=for-the-badge&logo=apache&logoColor=white&label=License)](LICENSE)
 
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white)](#兼容范围)
 [![NagramX](https://img.shields.io/badge/Target-nu.gpu.nagram-26A5E4?style=flat-square&logo=telegram&logoColor=white)](#兼容范围)
-[![LSPosed](https://img.shields.io/badge/LSPosed-API%20101--102-F48FB1?style=flat-square)](#兼容范围)
+[![LSPosed](https://img.shields.io/badge/LSPosed-API%20102-F48FB1?style=flat-square)](#兼容范围)
 [![Changelog](https://img.shields.io/badge/Changelog-Keep%20a%20Changelog-E05735?style=flat-square)](CHANGELOG.md)
 [![浏览量](https://visitor-badge.laobi.icu/badge?page_id=Xposed-Modules-Repo.com.shitianyaa.nagramx.videotimer&left_text=views)](https://github.com/Xposed-Modules-Repo/com.shitianyaa.nagramx.videotimer)
 
@@ -18,38 +20,32 @@
 
 ### 定时与后台
 
-- 在视频设置菜单中提供「后台定时播放」入口。
-- 支持 15 / 30 / 45 / 60 / 90 分钟，以及通过时/分滚轮设置自定义时长。
-- 支持「当前视频结束后停止」。
-- 可取消定时器，同时保持后台播放。
-- 退出全屏后音频继续，定时器在后台照常倒计时。
+- 视频设置菜单提供「后台定时播放」，确认后留在视频页。
+- 支持 15 / 30 / 45 / 60 / 90 分钟、自定义时长，以及当前视频结束后停止。
+- 手动返回后继续后台播放；从消息页或视频列表切换视频时，继承剩余定时。
+- 暂停、缓冲及播放器转交期间冻结倒计时，恢复播放后继续。
+- 定时到期暂停播放，保留顶栏和播放会话；取消定时仍可继续后台播放，手动关闭播放器才结束会话。
+- 会话保存在当前应用进程内，强制停止或进程重启后不恢复。
 
 ### 播放控制与界面
 
-- 通知栏媒体会话提供播放/暂停、上一个/下一个与进度显示。
-- 聊天页顶部迷你播放器显示标题和剩余定时时长，点按可回到全屏。
-- 播放列表可切换同一会话内的其他视频，并显示缩略图。
-- 定时菜单在激活状态下显示剩余时长并高亮。
-
-### 兼容与安全
-
-- 优先复用宿主已有的后台播放与睡眠定时 API。
-- 旧版宿主优先走 PhotoViewer 原生置顶播放（PiP）链路。
-- 缓冲或边下边播时也可先开定时，首帧就绪后再切置顶播放。
-- 定时结束只暂停并保留置顶播放；取消定时不销毁播放器。
-- 仅在 NagramX 主进程加载；自带状态页可查看服务、API、作用域与宿主版本。
+- 聊天页顶部播放器显示标题和剩余定时，点击直接返回视频详情页。
+- 视频菜单中的独立「视频列表」显示缩略图、标题、时长和当前项，可切换同一聊天中的视频。
+- 系统媒体通知支持播放/暂停、上一条/下一条及宿主的随机/循环模式。
+- 顺序播放时，手动点击「下一条」播放更新的消息，「上一条」播放更早的消息；随机播放沿用宿主逻辑。
+- 通知点击可能回到应用退出前的页面，不保证滚动定位到对应消息。
+- 仅在原版 NagramX 主进程加载；模块状态页显示目标包名和宿主安装版本。是否成功启用以 LSPosed 状态及宿主内菜单为准。
 
 ## 兼容范围
 
-| 项目 | 要求 |
+| 项目 | 要求或验证范围 |
 | --- | --- |
-| 目标应用 | 原版 NagramX |
-| 目标包名 | `nu.gpu.nagram` |
-| NagramX 版本 | 不限制 `versionCode` |
-| Android | 8.0+（`minSdk 26`） |
-| LSPosed | libxposed API 101–102 |
+| 目标应用 | 原版 NagramX，包名 `nu.gpu.nagram` |
+| 已验证宿主 | `12.9.2-4335a2e`（`versionCode 1260`） |
+| Android | 模块最低要求 8.0（`minSdk 26`）；不代表所有系统均已实测 |
+| LSPosed | libxposed API 102；本轮设备使用框架版本码 7854 / 7901 |
 
-模块会在运行时检测宿主接口。NagramX 内部结构发生变化时，部分功能可能不可用。
+本轮已在连接设备上验证视频切换、跨视频定时、顶栏返回、通知控制及全屏画面恢复。其他宿主版本和系统组合仍需测试。模块依赖 NagramX 内部接口；上游归档不代表所有版本都兼容。
 
 ## 安装
 
@@ -63,6 +59,21 @@
 1. 在 NagramX 中打开普通视频并开始播放。
 2. 打开视频设置菜单，选择「后台定时播放」。
 3. 选择停止时间，或选择当前视频结束后停止。
+
+## 构建与检查
+
+正式构建使用 Gradle，`app` 构建入口读取 `module/` 中的 Java 源码、资源和 Xposed 元数据：
+
+```powershell
+.\gradlew.bat :app:assembleDebug :app:assembleRelease :app:lintDebug
+.\module\test\run_test.ps1
+```
+
+Release 签名通过本地 `keystore.properties` 或 CI 的签名环境变量配置；签名材料不得提交到仓库。没有配置签名时，Gradle 仅生成未签名的 Release 包。标签构建要求正式签名，并运行 Java Hook 回归检查；发布标签格式为 `versionCode-versionName`。
+
+`build.ps1` / `build.sh` 用于本地快速制作测试包，使用独立开发签名，不能作为正式更新包覆盖安装。PowerShell 脚本可通过 `BT_W`、`AJ_W`、`JDK_W` 指定 Android Build Tools、android.jar 和 JDK bin 路径；默认路径沿用本机开发环境。
+
+桌面回归检查模拟宿主接口，不能替代 Android ART Hook、系统通知和完整真机交互测试。
 
 ## 更新与支持
 
