@@ -17,6 +17,7 @@ import android.widget.TextView;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.lang.ref.WeakReference;
 
 /**
  * 定时关闭面板：使用宿主 BottomSheet 与 NumberPicker。
@@ -47,8 +48,14 @@ final class VideoSleepTimerSheet {
     private final HostBridge bridge;
     private final Class<?> bottomSheetClass;
     private final Class<?> numberPickerClass;
+    private final boolean audio;
+    private WeakReference<Dialog> currentSheet = new WeakReference<>(null);
 
     VideoSleepTimerSheet(HostProfile host, HostTheme theme, HostStrings strings, HostBridge.Logger logger) {
+        this(host, theme, strings, logger, false);
+    }
+
+    VideoSleepTimerSheet(HostProfile host, HostTheme theme, HostStrings strings, HostBridge.Logger logger, boolean audio) {
         this.host = host;
         this.theme = theme;
         this.strings = strings;
@@ -56,6 +63,13 @@ final class VideoSleepTimerSheet {
         this.bridge = host.bridge;
         this.bottomSheetClass = bridge.loadClass("org.telegram.ui.ActionBar.BottomSheet");
         this.numberPickerClass = bridge.loadClass("org.telegram.ui.Components.NumberPicker");
+        this.audio = audio;
+    }
+
+    void dismiss() {
+        Dialog dialog = currentSheet.get();
+        if (dialog != null && dialog.isShowing()) dialog.dismiss();
+        currentSheet.clear();
     }
 
     boolean isAvailable() {
@@ -65,7 +79,7 @@ final class VideoSleepTimerSheet {
     boolean show(Activity activity, TimerState state, OnPickListener onPick, OnCancelListener onCancel) {
         if (bottomSheetClass == null) return false;
         try {
-            Object sheetObj = bridge.newInstance(bottomSheetClass, (Context) activity, false, theme.getDarkProvider());
+            Object sheetObj = bridge.newInstance(bottomSheetClass, (Context) activity, false, null);
             if (sheetObj == null) {
                 sheetObj = bridge.newInstance(bottomSheetClass, (Context) activity, false);
             }
@@ -81,6 +95,7 @@ final class VideoSleepTimerSheet {
             bridge.invoke(sheet, setCustomView, content);
             bridge.invokeNamed(sheet, "fixNavigationBar");
             sheet.show();
+            currentSheet = new WeakReference<>(sheet);
             return true;
         } catch (Throwable t) {
             logger.log("弹出定时面板失败", t);
@@ -104,10 +119,12 @@ final class VideoSleepTimerSheet {
         root.addView(sectionLabel(context, strings.get(context, "VideoSleepTimerQuickChoices")), linear(context, MATCH, WRAP, 22, 18, 22, 0, -1));
         root.addView(presets(context, state, sheet, onPick), linear(context, MATCH, WRAP, 0, 10, 0, 0, -1));
 
-        root.addView(afterCurrentRow(context, state, sheet, onPick), linear(context, MATCH, 50, 12, 6, 12, 0, -1));
+        if (!audio) {
+            root.addView(afterCurrentRow(context, state, sheet, onPick), linear(context, MATCH, 50, 12, 6, 12, 0, -1));
+        }
 
         root.addView(sectionLabel(context, strings.get(context, "VideoSleepTimerCustom")), linear(context, MATCH, WRAP, 22, 14, 22, 0, -1));
-        root.addView(hint(context, strings.get(context, "VideoSleepTimerCustomHint")), linear(context, MATCH, WRAP, 22, 4, 22, 0, -1));
+        root.addView(hint(context, strings.get(context, audio ? "AudioSleepTimerCustomHint" : "VideoSleepTimerCustomHint")), linear(context, MATCH, WRAP, 22, 4, 22, 0, -1));
 
         PickerPair picker = new PickerPair(context, state.selectedMinutes);
         picker.attach(root);
@@ -127,7 +144,7 @@ final class VideoSleepTimerSheet {
 
     private View handle(Context context) {
         View view = new View(context);
-        view.setBackground(theme.roundRect(context, 2f, theme.alpha(theme.color("sheet_scrollUp"), 0x66)));
+        view.setBackground(theme.roundRect(context, 2f, theme.alpha(theme.activeColor("sheet_scrollUp"), 0x66)));
         return view;
     }
 
@@ -135,7 +152,7 @@ final class VideoSleepTimerSheet {
         TextView tv = new TextView(context);
         tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20f);
         tv.setTypeface(theme.bold());
-        tv.setTextColor(theme.color("dialogTextBlack"));
+        tv.setTextColor(theme.activeColor("dialogTextBlack"));
         tv.setText(text);
         return tv;
     }
@@ -150,7 +167,7 @@ final class VideoSleepTimerSheet {
         }
         TextView tv = new TextView(context);
         tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14f);
-        tv.setTextColor(theme.color("dialogTextGray2"));
+        tv.setTextColor(theme.activeColor("dialogTextGray2"));
         tv.setText(text);
         return tv;
     }
@@ -159,7 +176,7 @@ final class VideoSleepTimerSheet {
         TextView tv = new TextView(context);
         tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14f);
         tv.setTypeface(theme.bold());
-        tv.setTextColor(theme.color("dialogTextBlue2"));
+        tv.setTextColor(theme.activeColor("dialogTextBlue2"));
         tv.setText(text);
         return tv;
     }
@@ -167,7 +184,7 @@ final class VideoSleepTimerSheet {
     private TextView hint(Context context, String text) {
         TextView tv = new TextView(context);
         tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13f);
-        tv.setTextColor(theme.color("dialogTextGray2"));
+        tv.setTextColor(theme.activeColor("dialogTextGray2"));
         tv.setText(text);
         return tv;
     }
@@ -191,11 +208,12 @@ final class VideoSleepTimerSheet {
             chip.setText(strings.duration(context, minutes));
 
             if (selected) {
-                chip.setTextColor(theme.color("featuredStickers_buttonText"));
-                chip.setBackground(theme.rippleRect(context, 18f, theme.color("featuredStickers_addButton"), theme.alpha(HostTheme.WHITE, 0x30)));
+                chip.setTextColor(theme.activeColor("featuredStickers_buttonText"));
+                chip.setBackground(theme.rippleRect(context, 18f, theme.activeColor("featuredStickers_addButton"), theme.alpha(HostTheme.WHITE, 0x30)));
             } else {
-                chip.setTextColor(theme.color("dialogTextBlack"));
-                chip.setBackground(theme.rippleRect(context, 18f, theme.alpha(HostTheme.WHITE, 0x14), theme.color("dialogButtonSelector")));
+                int textColor = theme.activeColor("dialogTextBlack");
+                chip.setTextColor(textColor);
+                chip.setBackground(theme.rippleRect(context, 18f, theme.alpha(textColor, 0x14), theme.activeColor("listSelector")));
             }
 
             chip.setOnClickListener(v -> {
@@ -220,9 +238,9 @@ final class VideoSleepTimerSheet {
         tv.setGravity(Gravity.CENTER_VERTICAL);
         tv.setPadding(theme.dp(context, 10), 0, theme.dp(context, 10), 0);
         tv.setText(strings.get(context, "VideoSleepTimerAfterCurrent"));
-        tv.setTextColor(selected ? theme.color("dialogTextBlue2") : theme.color("dialogTextBlack"));
+        tv.setTextColor(theme.activeColor(selected ? "dialogTextBlue2" : "dialogTextBlack"));
         if (selected) tv.setTypeface(theme.bold());
-        tv.setBackground(theme.rippleTransparent(context, 10f, theme.color("listSelector")));
+        tv.setBackground(theme.rippleTransparent(context, 10f, theme.activeColor("listSelector")));
         tv.setOnClickListener(v -> {
             onPick.onPick(VideoBackgroundSession.MODE_AFTER_CURRENT, 0);
             sheet.dismiss();
@@ -235,9 +253,9 @@ final class VideoSleepTimerSheet {
         tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15f);
         tv.setTypeface(theme.bold());
         tv.setGravity(Gravity.CENTER);
-        tv.setTextColor(theme.color("featuredStickers_buttonText"));
+        tv.setTextColor(theme.activeColor("featuredStickers_buttonText"));
         tv.setText(strings.get(context, "VideoSleepTimerApply"));
-        tv.setBackground(theme.rippleRect(context, 8f, theme.color("featuredStickers_addButton"), theme.alpha(HostTheme.WHITE, 0x30)));
+        tv.setBackground(theme.rippleRect(context, 8f, theme.activeColor("featuredStickers_addButton"), theme.alpha(HostTheme.WHITE, 0x30)));
         tv.setOnClickListener(v -> {
             int minutes = Math.max(1, picker.totalMinutes());
             onPick.onPick(VideoBackgroundSession.MODE_DURATION, minutes);
@@ -250,9 +268,9 @@ final class VideoSleepTimerSheet {
         TextView tv = new TextView(context);
         tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15f);
         tv.setGravity(Gravity.CENTER);
-        tv.setTextColor(theme.color("text_RedRegular"));
+        tv.setTextColor(theme.activeColor("text_RedRegular"));
         tv.setText(strings.get(context, "VideoSleepTimerCancel"));
-        tv.setBackground(theme.rippleTransparent(context, 8f, theme.color("listSelector")));
+        tv.setBackground(theme.rippleTransparent(context, 8f, theme.activeColor("listSelector")));
         tv.setOnClickListener(v -> {
             onCancel.onCancel();
             sheet.dismiss();
@@ -269,6 +287,10 @@ final class VideoSleepTimerSheet {
             int m = Math.max(0, Math.min(59, initialMinutes % 60));
             hours = createPicker(context, 23, h, val -> strings.format(context, "VideoSleepTimerDurationHours", val));
             minutes = createPicker(context, 59, m, val -> strings.minutes(context, val));
+            if (isUsable()) {
+                syncMinuteRange(bridge, hours, minutes);
+                installHourListener();
+            }
         }
 
         boolean isUsable() {
@@ -299,10 +321,38 @@ final class VideoSleepTimerSheet {
             return h * 60 + m;
         }
 
+        private void installHourListener() {
+            Method setter = bridge.findMethod(numberPickerClass, "setOnValueChangedListener", 1,
+                    method -> method.getParameterTypes()[0].isInterface());
+            if (setter == null) {
+                logger.log("定时面板小时联动不可用：缺少 NumberPicker 值变更监听接口", null);
+                return;
+            }
+            Class<?> listenerType = setter.getParameterTypes()[0];
+            try {
+                Object listener = Proxy.newProxyInstance(listenerType.getClassLoader(), new Class<?>[]{listenerType},
+                        (proxy, method, args) -> {
+                            if (method.getReturnType() == void.class && method.getParameterCount() == 3
+                                    && method.getParameterTypes()[1] == int.class
+                                    && method.getParameterTypes()[2] == int.class) {
+                                syncMinuteRange(bridge, hours, minutes);
+                                return null;
+                            }
+                            if ("hashCode".equals(method.getName())) return System.identityHashCode(proxy);
+                            if ("equals".equals(method.getName())) return proxy == args[0];
+                            if ("toString".equals(method.getName())) return "SleepTimerHourListener";
+                            return null;
+                        });
+                bridge.invoke(hours, setter, listener);
+            } catch (IllegalArgumentException | SecurityException failure) {
+                logger.log("创建定时面板小时联动监听失败", failure);
+            }
+        }
+
         @SuppressLint("ClickableViewAccessibility")
         private View createPicker(Context context, int max, int value, FormatterFunction format) {
             if (numberPickerClass == null) return null;
-            Object pickerObj = bridge.newInstance(numberPickerClass, context, 20, theme.getDarkProvider());
+            Object pickerObj = bridge.newInstance(numberPickerClass, context, 20, null);
             if (pickerObj == null) {
                 pickerObj = bridge.newInstance(numberPickerClass, context, 20);
             }
@@ -313,8 +363,8 @@ final class VideoSleepTimerSheet {
             View picker = (View) pickerObj;
 
             bridge.invokeNamed(picker, "setItemCount", 5);
-            bridge.invokeNamed(picker, "setTextColor", theme.color("dialogTextBlack"));
-            bridge.invokeNamed(picker, "setSelectorColor", theme.color("dialogButtonSelector"));
+            bridge.invokeNamed(picker, "setTextColor", theme.activeColor("dialogTextBlack"));
+            bridge.invokeNamed(picker, "setSelectorColor", theme.activeColor("dialogButtonSelector"));
             bridge.invokeNamed(picker, "setMinValue", 0);
             bridge.invokeNamed(picker, "setMaxValue", max);
             bridge.invokeNamed(picker, "setAllItemsCount", max + 1);
@@ -334,30 +384,48 @@ final class VideoSleepTimerSheet {
         }
 
         private void installFormatter(View picker, FormatterFunction format) {
-            Class<?> formatterClass = bridge.loadClass("org.telegram.ui.Components.NumberPicker$Formatter");
-            if (formatterClass == null) return;
+            Method setter = bridge.findMethod(numberPickerClass, "setFormatter", 1,
+                    method -> method.getParameterTypes()[0].isInterface());
+            if (setter == null) {
+                return;
+            }
+            Class<?> formatterClass = setter.getParameterTypes()[0];
             try {
                 Object proxy = Proxy.newProxyInstance(
                         formatterClass.getClassLoader(),
                         new Class<?>[]{formatterClass},
                         (proxyObj, method, args) -> {
-                            if ("format".equals(method.getName()) && args != null && args.length == 1) {
-                                int val = (args[0] instanceof Number) ? ((Number) args[0]).intValue() : 0;
-                                return format.format(val);
+                            if (method.getReturnType() == String.class && method.getParameterCount() == 1
+                                    && method.getParameterTypes()[0] == int.class) {
+                                return format.format((Integer) args[0]);
                             }
-                            if ("hashCode".equals(method.getName())) return System.identityHashCode(picker);
-                            if ("equals".equals(method.getName())) return false;
-                            if ("toString".equals(method.getName())) return "NumberPickerFormatter";
+                            if ("hashCode".equals(method.getName())) {
+                                return System.identityHashCode(proxyObj);
+                            }
+                            if ("equals".equals(method.getName())) {
+                                return proxyObj == args[0];
+                            }
+                            if ("toString".equals(method.getName())) {
+                                return "NumberPickerFormatter";
+                            }
                             return null;
                         }
                 );
-                Method setter = bridge.findMethod(numberPickerClass, "setFormatter", 1);
-                if (setter != null) {
-                    bridge.invoke(picker, setter, proxy);
-                }
-            } catch (Throwable t) {
+                bridge.invoke(picker, setter, proxy);
+            } catch (IllegalArgumentException | SecurityException t) {
                 logger.log("创建 NumberPicker.Formatter 代理失败", t);
             }
+        }
+    }
+
+    static void syncMinuteRange(HostBridge bridge, Object hours, Object minutes) {
+        Object value = bridge.invokeNamed(hours, "getValue");
+        int minimum = value instanceof Number && ((Number) value).intValue() > 0 ? 0 : 1;
+        Object current = bridge.invokeNamed(minutes, "getValue");
+        bridge.invokeNamed(minutes, "setMinValue", minimum);
+        bridge.invokeNamed(minutes, "setAllItemsCount", 60 - minimum);
+        if (current instanceof Number && ((Number) current).intValue() < minimum) {
+            bridge.invokeNamed(minutes, "setValue", minimum);
         }
     }
 
